@@ -22,15 +22,18 @@ import (
 
 const (
 	Namespace                  = "minecraft"
-	Forge                      = "forge"
-	PaperMC                    = "papermc"
-	Fabric                     = "fabric"
-	PurpurMC                   = "purpurmc"
-	rconListCommand            = "list"
-	rconForgeTpsCommand        = "forge tps"
-	rconForgeEntityListCommand = "forge entity list"
-	rconTpsCommand             = "tps"
-	rconFabricTpsCommand       = "fabric tps"
+	Forge                         = "forge"
+	NeoForge                      = "neoforge"
+	PaperMC                       = "papermc"
+	Fabric                        = "fabric"
+	PurpurMC                      = "purpurmc"
+	rconListCommand               = "list"
+	rconForgeTpsCommand           = "forge tps"
+	rconForgeEntityListCommand    = "forge entity list"
+	rconNeoForgeTpsCommand        = "neoforge tps"
+	rconNeoForgeEntityListCommand = "neoforge entity list"
+	rconTpsCommand                = "tps"
+	rconFabricTpsCommand          = "fabric tps"
 )
 
 // See for all details on the statistics of Minecraft https://minecraft.fandom.com/wiki/Statistics
@@ -825,8 +828,14 @@ func parseFloat64FromString(value string) float64 {
 
 func (e *Exporter) getServerStats(ch chan<- prometheus.Metric) (retErr error) {
 	switch e.serverStats {
-	case Forge:
-		resp, err := e.executeRCONCommand(rconForgeTpsCommand)
+	case Forge, NeoForge:
+		tpsCmd := rconForgeTpsCommand
+		entityCmd := rconForgeEntityListCommand
+		if e.serverStats == NeoForge {
+			tpsCmd = rconNeoForgeTpsCommand
+			entityCmd = rconNeoForgeEntityListCommand
+		}
+		resp, err := e.executeRCONCommand(tpsCmd)
 		if err != nil {
 			return err
 		}
@@ -848,7 +857,7 @@ func (e *Exporter) getServerStats(ch chan<- prometheus.Metric) (retErr error) {
 				ch <- prometheus.MustNewConstMetric(e.overallTicktime, prometheus.GaugeValue, meanTickTime)
 			}
 		}
-		resp, err = e.executeRCONCommand(rconForgeEntityListCommand)
+		resp, err = e.executeRCONCommand(entityCmd)
 		if resp != nil {
 			if err != nil {
 				return err

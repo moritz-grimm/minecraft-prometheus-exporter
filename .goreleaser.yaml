@@ -27,7 +27,7 @@ builds:
 
 dockers:
   - image_templates:
-      - "ghcr.io/dirien/{{ .ProjectName }}:{{ .Version }}-amd64"
+      - "ghcr.io/moritz-grimm/{{ .ProjectName }}:{{ .Version }}-amd64"
     dockerfile: Dockerfile
     use: buildx
     build_flag_templates:
@@ -39,13 +39,8 @@ dockers:
       - --label=org.opencontainers.image.revision={{.FullCommit}}
       - --label=org.opencontainers.image.version={{.Version}}
       - --label=org.opencontainers.image.source={{.GitURL}}
-      - --label=io.artifacthub.package.maintainers=[{"name":"Engin Diri","email":"engin.diri@ediri.de"}]
-      - --label=io.artifacthub.package.readme-url=https://raw.githubusercontent.com/dirien/minecraft-prometheus-exporter/main/CONTAINER.md
-      - --label=io.artifacthub.package.logo-url=https://dirien.github.io/minecraft-prometheus-exporter/img/chart-logo.png
-      - --label=io.artifacthub.package.keywords=minecraft,prometheus,exporter
-      - --label=io.artifacthub.package.license=Apache-2.0
   - image_templates:
-      - "ghcr.io/dirien/{{ .ProjectName }}:{{ .Version }}-arm64"
+      - "ghcr.io/moritz-grimm/{{ .ProjectName }}:{{ .Version }}-arm64"
     goarch: arm64
     dockerfile: Dockerfile
     use: buildx
@@ -58,21 +53,16 @@ dockers:
       - --label=org.opencontainers.image.revision={{.FullCommit}}
       - --label=org.opencontainers.image.version={{.Version}}
       - --label=org.opencontainers.image.source={{.GitURL}}
-      - --label=io.artifacthub.package.maintainers=[{"name":"Engin Diri","email":"engin.diri@ediri.de"}]
-      - --label=io.artifacthub.package.readme-url=https://raw.githubusercontent.com/dirien/minecraft-prometheus-exporter/main/CONTAINER.md
-      - --label=io.artifacthub.package.logo-url=https://dirien.github.io/minecraft-prometheus-exporter/img/chart-logo.png
-      - --label=io.artifacthub.package.keywords=minecraft,prometheus,exporter
-      - --label=io.artifacthub.package.license=Apache-2.0
 
 docker_manifests:
-  - name_template: 'ghcr.io/dirien/{{ .ProjectName }}:{{ .Version }}'
+  - name_template: 'ghcr.io/moritz-grimm/{{ .ProjectName }}:{{ .Version }}'
     image_templates:
-      - 'ghcr.io/dirien/{{ .ProjectName }}:{{ .Version }}-amd64'
-      - 'ghcr.io/dirien/{{ .ProjectName }}:{{ .Version }}-arm64'
-  - name_template: 'ghcr.io/dirien/{{ .ProjectName }}:latest'
+      - 'ghcr.io/moritz-grimm/{{ .ProjectName }}:{{ .Version }}-amd64'
+      - 'ghcr.io/moritz-grimm/{{ .ProjectName }}:{{ .Version }}-arm64'
+  - name_template: 'ghcr.io/moritz-grimm/{{ .ProjectName }}:latest'
     image_templates:
-      - 'ghcr.io/dirien/{{ .ProjectName }}:{{ .Version }}-amd64'
-      - 'ghcr.io/dirien/{{ .ProjectName }}:{{ .Version }}-arm64'
+      - 'ghcr.io/moritz-grimm/{{ .ProjectName }}:{{ .Version }}-amd64'
+      - 'ghcr.io/moritz-grimm/{{ .ProjectName }}:{{ .Version }}-arm64'
 
 source:
   enabled: true
