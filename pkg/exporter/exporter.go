@@ -51,6 +51,7 @@ type Exporter struct {
 	entityListRegexp   *regexp.Regexp
 	paperMcTpsRegexp   *regexp.Regexp
 	purpurMcTpsRegexp  *regexp.Regexp
+	neoForgeDimRegexp  *regexp.Regexp
 
 	// via advancements
 	// playerAdvancements *prometheus.Desc
@@ -191,6 +192,7 @@ func New(server, password, world, source, serverStats string, disabledMetrics ma
 		entityListRegexp:   regexp.MustCompile(`(\d+):\s(.*):(.*)`),
 		paperMcTpsRegexp:   regexp.MustCompile(`§.TPS from last\s1m,\s5m,\s15m:\s§.(\d.*),\s§.(\d.*),\s§.(\d.*)`),
 		purpurMcTpsRegexp:  regexp.MustCompile(`§.TPS from last\s5s,\s1m,\s5m,\s15m:\s§.(\d.*),\s§.(\d.*),\s§.(\d.*),\s§.(\d.*)`),
+		neoForgeDimRegexp:  regexp.MustCompile(`(.+):\s+([\d.]+)\s+TPS\s+\(([\d.]+)\s+ms/tick\)`),
 		disabledMetrics:    disabledMetrics,
 		playerOnline: prometheus.NewDesc(
 			prometheus.BuildFQName(Namespace, "", "player_online"),
@@ -826,6 +828,16 @@ func parseFloat64FromString(value string) float64 {
 	return valueInFloat64
 }
 
+func splitNeoForgeDimension(name string) (namespace, dimension string) {
+	if idx := strings.Index(name, ":"); idx != -1 {
+		ns, dim := name[:idx], name[idx+1:]
+		if !strings.Contains(ns, " ") && !strings.Contains(dim, " ") {
+			return ns, dim
+		}
+	}
+	return "", name
+}
+
 func (e *Exporter) getServerStats(ch chan<- prometheus.Metric) (retErr error) {
 	switch e.serverStats {
 	case Forge, NeoForge:
@@ -840,21 +852,37 @@ func (e *Exporter) getServerStats(ch chan<- prometheus.Metric) (retErr error) {
 			return err
 		}
 		if resp != nil {
-			dimTpsList := e.dimensionRegexp.FindAllStringSubmatch(*resp, -1)
-			for _, dimTps := range dimTpsList {
-				namespace := dimTps[1]
-				dimension := dimTps[2]
-				meanTickTimeDimension := parseFloat64FromString(dimTps[3])
-				meanTpsDimension := parseFloat64FromString(dimTps[4])
-				ch <- prometheus.MustNewConstMetric(e.dimTps, prometheus.GaugeValue, meanTpsDimension, namespace, dimension)
-				ch <- prometheus.MustNewConstMetric(e.dimTicktime, prometheus.GaugeValue, meanTickTimeDimension, namespace, dimension)
-			}
-			overall := e.overallRegexp.FindStringSubmatch(*resp)
-			if len(overall) == 3 {
-				meanTickTime := parseFloat64FromString(overall[1])
-				meanTps := parseFloat64FromString(overall[2])
-				ch <- prometheus.MustNewConstMetric(e.overallTps, prometheus.GaugeValue, meanTps)
-				ch <- prometheus.MustNewConstMetric(e.overallTicktime, prometheus.GaugeValue, meanTickTime)
+			if e.serverStats == NeoForge {
+				for _, m := range e.neoForgeDimRegexp.FindAllStringSubmatch(*resp, -1) {
+					name := strings.TrimSpace(m[1])
+					tps := parseFloat64FromString(m[2])
+					ticktime := parseFloat64FromString(m[3])
+					if name == "Overall" {
+						ch <- prometheus.MustNewConstMetric(e.overallTps, prometheus.GaugeValue, tps)
+						ch <- prometheus.MustNewConstMetric(e.overallTicktime, prometheus.GaugeValue, ticktime)
+					} else {
+						ns, dim := splitNeoForgeDimension(name)
+						ch <- prometheus.MustNewConstMetric(e.dimTps, prometheus.GaugeValue, tps, ns, dim)
+						ch <- prometheus.MustNewConstMetric(e.dimTicktime, prometheus.GaugeValue, ticktime, ns, dim)
+					}
+				}
+			} else {
+				dimTpsList := e.dimensionRegexp.FindAllStringSubmatch(*resp, -1)
+				for _, dimTps := range dimTpsList {
+					namespace := dimTps[1]
+					dimension := dimTps[2]
+					meanTickTimeDimension := parseFloat64FromString(dimTps[3])
+					meanTpsDimension := parseFloat64FromString(dimTps[4])
+					ch <- prometheus.MustNewConstMetric(e.dimTps, prometheus.GaugeValue, meanTpsDimension, namespace, dimension)
+					ch <- prometheus.MustNewConstMetric(e.dimTicktime, prometheus.GaugeValue, meanTickTimeDimension, namespace, dimension)
+				}
+				overall := e.overallRegexp.FindStringSubmatch(*resp)
+				if len(overall) == 3 {
+					meanTickTime := parseFloat64FromString(overall[1])
+					meanTps := parseFloat64FromString(overall[2])
+					ch <- prometheus.MustNewConstMetric(e.overallTps, prometheus.GaugeValue, meanTps)
+					ch <- prometheus.MustNewConstMetric(e.overallTicktime, prometheus.GaugeValue, meanTickTime)
+				}
 			}
 		}
 		resp, err = e.executeRCONCommand(entityCmd)
